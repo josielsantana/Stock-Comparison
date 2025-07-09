@@ -7,15 +7,31 @@ import time
 import numpy as np
 
 
+def calcule_tangent_portifolio(df_returns):
+    risk_free_rate = 0.02 / 250 
+
+    mean_returns = df_returns.mean()
+    cov_matrix = df_returns.cov()
+    excess_returns = mean_returns - risk_free_rate
+    inv_cov = np.linalg.inv(cov_matrix)
+
+    opt_weights = inv_cov @ excess_returns
+    opt_weights /= opt_weights.sum() 
+
+    peso1 = round(opt_weights[0]*100, 2)
+    peso2 = round(opt_weights[1]*100, 2)
+    return peso1, peso2
+
+
 st.set_page_config(page_title="Stock Comparison", layout="centered")
-st.title("📈 Brazilian Stock Comparison - B3")
+st.title("📈 Stock Comparison")
 
 col1, col2 = st.columns(2)
 with col1:
-    input1 = st.text_input("Ticker 1", value="PETR4")
+    input1 = st.text_input("Ticker 1", value="PETR4.SA")
     weight1 = st.number_input("Weight 1 (%)", min_value=0, max_value=100, value=50) / 100
 with col2:
-    input2 = st.text_input("Ticker 2", value="VALE3")
+    input2 = st.text_input("Ticker 2", value="VALE3.SA")
     weight2 = st.number_input("Weight 2 (%)", min_value=0, max_value=100, value=50) / 100
 
 
@@ -23,11 +39,11 @@ if st.button("🔍 Analyze"):
     try:
         end_date = time.strftime("%Y-%m-%d")
         start_date = f"{int(time.strftime('%Y'))-5}-01-01"
-        tickers = [f"{input1}.SA", f"{input2}.SA"]
+        tickers = [f"{input1}", f"{input2}"]
         data = Ticker(tickers).history(start=start_date, end=end_date)
 
         if data.empty:
-            st.error("Nenhum dado encontrado. Verifique os tickers.")
+            st.error("No data founded. Please verify the ticket names.")
         else:
             df = data.reset_index()
 
@@ -69,7 +85,13 @@ if st.button("🔍 Analyze"):
                 plt.tight_layout()
                 st.pyplot(plt.gcf())
 
-            st.metric("📊 Retorno Anualizado da Carteira", f"{annual_return * 100:.2f}%")
+            st.metric("📊 Yearly ROI", f"{annual_return * 100:.2f}%")
+            #add best tickets weight using tangent portfolio
+            st.markdown("### 💡 Carteira Ótima (Markowitz - Máximo Sharpe)")
 
+            w1, w2 = calcule_tangent_portifolio(merged)
+            col1, col2 = st.columns(2)
+            col1.metric(label=f"Peso ótimo - {input1.upper()}", value=f"{w1}%")
+            col2.metric(label=f"Peso ótimo - {input2.upper()}", value=f"{w2}%")
     except Exception as e:
-        st.error(f"Erro ao buscar os dados: {e}")
+        st.error(f"Error: {e}")
